@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 
 namespace MSESetLibrary
 {
+    /// <summary>
+    /// Represents an ".mse-set" file.
+    /// </summary>
     public class MSESet
     {
         /*
@@ -28,11 +31,15 @@ namespace MSESetLibrary
         private string game;
         private string stylesheet;
         private string mseversion;
-        private List<MSEKeyValue> setInfo; //SetInfo
+        private MSEDictionary setInfo; //SetInfo
         private Dictionary<string, byte[]> imageList; //Images converted to byte arrays
         private MSECard[] cardsList; //cards in the Set
         private MSEKeyword[] keywordsList; //Keywords unique to the Set
 
+        /// <summary>
+        /// Initializes a new instance of a <see cref="MSESet"/> from a file path.
+        /// </summary>
+        /// <param name="path">A relative or absolute path for the file that the current <see cref="MSESet"/> with read from.</param>
         public MSESet(string path)
         {
             //Read Zip Archive
@@ -62,16 +69,29 @@ namespace MSESetLibrary
 
         private void GetSetDetails(ZipArchiveEntry setFile)
         {
-            //Read Text File
+            using (var zipEntryStream = setFile.Open())
+            using (StreamReader streamReader = new StreamReader(zipEntryStream))
+            {
+                //Read Text File
+                string msedata = streamReader.ReadToEnd();
+                setInfo = ConvertToDictionary(msedata);
+            }
 
+            game = setInfo.RemoveAndGet("game").Value.ToString();
+            stylesheet = setInfo.RemoveAndGet("stylesheet").Value.ToString();
+            mseversion = setInfo.RemoveAndGet("mse version").Value.ToString();
+
+            IEnumerable<MSEKeyValue> cardList = setInfo.RemoveAndGetAll("card");
+            IEnumerable<MSEKeyValue> keywordList = setInfo.RemoveAndGetAll("keyword");
         }
 
-        private List<MSEKeyValue> ConvertToArray(string msedata)
+        //Converts a Section to an MSEDictionary
+        private MSEDictionary ConvertToDictionary(string sectiontext)
         {
             //Remove Indent
             //string[] lines = msedata.Split('\n');
-            string[] sections = Regex.Split(msedata, @"(\n[A-Za-z])+");
-            List<MSEKeyValue> mseList = new List<MSEKeyValue>();
+            string[] sections = Regex.Split(sectiontext, @"(\n[A-Za-z])+");
+            MSEDictionary mseList = new MSEDictionary();
             for (int i = 0; i < sections.Length; i++)
             {
                 string section = sections[i];
@@ -85,7 +105,7 @@ namespace MSESetLibrary
                     string title = section.Substring(0, separateAt).Trim();
                     string newdata = section.Substring(separateAt).Replace("\n\t", "\n");
                     //Recursion
-                    List<MSEKeyValue> sectionData = ConvertToArray(newdata);
+                    MSEDictionary sectionData = ConvertToDictionary(newdata);
                     //Add to List
                     mseList.Add(new MSEKeyValue(title, typeof(List<MSEKeyValue>), sectionData));
                 }
@@ -95,12 +115,12 @@ namespace MSESetLibrary
         }
 
         //Initializing MSEKeyValue
-        private static MSEKeyValue CreateMSEKeyValue(string msedataline)
+        private static MSEKeyValue CreateMSEKeyValue(string dataline)
         {
             //Separate into Key and Data
-            string[] keyvalue = msedataline.Split(':');
+            string[] keyvalue = dataline.Split(':');
             //Not Valid Line
-            if (keyvalue.Length < 2) throw new Exception("Line is not a data line, and not suitable for a KeyValue Pair.");
+            if (keyvalue.Length < 2) throw new Exception("Line is not a data line, and not suitable for a MSEKeyValue.");
             //Get Data Value
             string data = keyvalue[1].Trim();
             DateTime returnDate;
@@ -129,8 +149,8 @@ namespace MSESetLibrary
         public string Notes { get; set; }
         public DateTime DateCreated { get; set; }
         public DateTime DateModified { get; set; }
-        public List<MSEKeyValue> CardInfo { get; set; }
-        public string stylesheet { get; set; }
+        public MSEDictionary CardInfo { get; set; }
+        public string Stylesheet { get; set; }
     }
 
     public class MSEKeyword
@@ -149,12 +169,25 @@ namespace MSESetLibrary
         public 
     }
     */
+    /// <summary>
+    /// Represents a KeyValue Pair where the value is of a varying type
+    /// </summary>
     public class MSEKeyValue
     {
-        public string Key { get; set; }
-        public Type Type { get; set; }
-        public object Value { get; set; }
+        /// <summary>
+        /// The Name for the Key/Parameter of a component of the <see cref="MSESet"/>.
+        /// </summary>
+        public string Key { get; }
+        /// <summary>
+        /// The type that <see cref="Value"/> should read as.
+        /// </summary>
+        public Type Type { get; }
+        /// <summary>
+        /// The <see cref="Value"/> stored when initialised.
+        /// </summary>
+        public object Value { get; }
 
+        //Constructor
         public MSEKeyValue(string key, Type type, object value)
         {
             this.Key = key;
@@ -162,14 +195,166 @@ namespace MSESetLibrary
             this.Value = value;
         }
 
+        /// <summary>
+        /// Checks if the <see cref="MSEKeyValue"/> of the specific type
+        /// </summary>
+        /// <param name="compareType">The type to compare it to</param>
+        /// <returns>Checks if the <see cref="MSEKeyValue"/> of the specific type</returns>
         public bool IsType(Type compareType)
         {
             return compareType == this.Type;
         }
 
+        /// <summary>
+        /// Returns the Value as Type T.
+        /// </summary>
+        /// <typeparam name="T">The object Type the value should be returned as.</typeparam>
+        /// <returns>Returns the Value as Type T.</returns>
         public T GetValue<T>()
         {
             return (T)this.Value;
+        }
+    }
+
+    /// <summary>
+    /// Represents a <see cref="List{MSEKeyValue}"/> of <see cref="MSEKeyValue"/> that can be accessed by index.
+    /// </summary>
+    public class MSEDictionary : List<MSEKeyValue>
+    {
+        /// <summary>
+        /// Removes the first occurence of a key in <see cref="MSEDictionary"/>
+        /// </summary>
+        /// <param name="key">The Key of a value to be removed</param>
+        /// <returns>Removes the first occurence of a key in <see cref="MSEDictionary"/></returns>
+        public bool Remove(string key)
+        {
+            for (int i = 0; i < this.Count; i++)
+            {
+                //Key is the same
+                if (this[i].Key == key)
+                {
+                    this.RemoveAt(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        //Get Value of Type
+        /// <summary>
+        /// Gets an <see cref="MSEKeyValue"/> from the <see cref="MSEDictionary"/> with a matching key and type.
+        /// </summary>
+        /// <typeparam name="T">The Type of the value to be returned</typeparam>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns the first value of a <see cref="MSEKeyValue"/> with a matching key and type.</returns>
+        public T GetValue<T>(string key)
+        {
+            //Search List
+            foreach (MSEKeyValue keyValue in this)
+            {
+                //Key is the same
+                if (keyValue.Key == key)
+                {
+                    //Return Value
+                    if (keyValue.Type == typeof(T)) return (T)keyValue.Value;
+                    else return default(T);
+                }
+            }
+            //Return default if not found
+            return default(T);
+        }
+
+        /// <summary>
+        /// Gets the first <see cref="MSEKeyValue"/> from the <see cref="MSEDictionary"/> with a matching key.
+        /// </summary>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns the first <see cref="MSEKeyValue"/> with a matching key.</returns>
+        public MSEKeyValue GetValue(string key)
+        {
+            foreach (MSEKeyValue keyValue in this)
+            {
+                //Key is the same
+                if (keyValue.Key == key) return keyValue;
+            }
+            //Return Null if not found
+            return null;
+        }
+
+        /// <summary>
+        /// Returns and removes a <see cref="MSEKeyValue"/> from <see cref="MSEDictionary"/> with a matching key.
+        /// </summary>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns and removes the first <see cref="MSEKeyValue"/> with a matching key.</returns>
+        public MSEKeyValue RemoveAndGet(string key)
+        {
+            for (int i = 0; i < this.Count; i++)
+            {
+                //Key is the same
+                if (this[i].Key == key)
+                {
+                    MSEKeyValue keyValue = this[i];
+                    this.RemoveAt(i);
+                    return keyValue;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Returns a list of all <see cref="MSEKeyValue"/> with matching keys.
+        /// </summary>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns a list of all <see cref="MSEKeyValue"/> with matching keys.</returns>
+        public IEnumerable<MSEKeyValue> FindAll(string key)
+        {
+            List<MSEKeyValue> keyValues = new List<MSEKeyValue>();
+            foreach (MSEKeyValue keyValue in this)
+            {
+                //Key is the same
+                if (keyValue.Key == key) keyValues.Add(keyValue);
+            }
+            return keyValues;
+        }
+
+        /// <summary>
+        /// Returns a list of all <see cref="MSEKeyValue"/> with matching keys.
+        /// </summary>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns a list of all <see cref="MSEKeyValue"/> with matching keys.</returns>
+        public bool RemoveAll(string key)
+        {
+            bool hasDeleted = false;
+            //Loop Backwards to prevent bad deletions
+            for (int i = this.Count - 1; i >= 0; i--)
+            {
+                if (this[i].Key == key)
+                {
+                    this.RemoveAt(i);
+                    hasDeleted = true;
+                }
+            }
+            //Return result of deletion
+            return hasDeleted;
+        }
+
+        /// <summary>
+        /// Returns and deletes a list of all <see cref="MSEKeyValue"/> with matching keys.
+        /// </summary>
+        /// <param name="key">The Key of a <see cref="MSEKeyValue"/></param>
+        /// <returns>Returns and deletes a list of all <see cref="MSEKeyValue"/> with matching keys.</returns>
+        public IEnumerable<MSEKeyValue> RemoveAndGetAll(string key)
+        {
+            List<MSEKeyValue> keyValues = new List<MSEKeyValue>();
+            //Loop Backwards to prevent bad deletions
+            for (int i = this.Count - 1; i >= 0; i--)
+            {
+                if (this[i].Key == key)
+                {
+                    keyValues.Add(this[i]);
+                    this.RemoveAt(i);
+                }
+            }
+            return keyValues;
         }
     }
 }
