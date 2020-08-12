@@ -13,20 +13,6 @@ namespace MSESetLibrary
     /// </summary>
     public class MSESet
     {
-        /*
-         * title: Outcast Provocation
-	     * description:
-		 *     A clan of outcasts from the United Sanctuary and Dragon Empire has finished forming together. Will this become dangerous?
-		 * 
-		 *     This is just the beginning.
-	     * artist: 
-	     * copyright: 
-	     * symbol: symbol3.mse-symbol
-	     * border color: rgb(255,255,255)
-	     * automatic reminder text: old, core, expert, custom, fanmade
-	     * automatic card numbers: no
-	     * sort special rarity: after other cards
-        */
         //Variables
         string game;
         string stylesheet;
@@ -173,6 +159,47 @@ namespace MSESetLibrary
         public string Match { get; set; }
         public string Reminder { get; set; }
         public string Mode { get; set; }
+
+        public MSEKeyword(string data)
+        {
+            string[] sections = Regex.Split(data, @"[\r\n]+(?![\t\n])");
+            for (int i = 0; i < sections.Length; i++)
+            {
+                string section = sections[i];
+                //Get Index to Separate Title from NewData
+                int separateAt = section.IndexOf(':');
+
+                //Continue if it is not a valid parameter
+                if (separateAt == -1 || section.Length == 0) continue;
+                else
+                {
+                    //Separate into Title and Value
+                    string title = section.Substring(0, separateAt).Trim();
+                    string value = section.Substring(separateAt + 1).Trim();
+                    //Separate by Parameter Name
+                    switch (title)
+                    {
+                        case "keyword":
+                            Keyword = value;
+                            break;
+                        case "match":
+                            Match = value;
+                            break;
+                        case "mode":
+                            Mode = value;
+                            break;
+                        case "reminder":
+                            Reminder = value;
+                            break;
+                        //Game Fields
+                        default:
+                            Console.WriteLine(value);
+                            break;
+                    }
+
+                }
+            }
+        }
     }
 
     /*
@@ -183,6 +210,7 @@ namespace MSESetLibrary
         public 
     }
     */
+
     /// <summary>
     /// Represents a KeyValue Pair where the value is of a varying type
     /// </summary>
@@ -282,6 +310,7 @@ namespace MSESetLibrary
         public object Value
         {
             get { return _value; }
+            set { _value = value; }
         }
     }
 
@@ -455,6 +484,7 @@ namespace MSESetLibrary
                 {
                     //Convert to MSECard instead
                     if (title == "card") mseList.Add(new MSEKeyValue(title, typeof(MSECard), new MSECard(value)));
+                    else if (title == "keyword") mseList.Add(new MSEKeyValue(title, typeof(MSEKeyword), new MSEKeyword(value)));
                     else
                     {
                         //Recursion
