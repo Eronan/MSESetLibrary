@@ -22,6 +22,7 @@ namespace MSESetLibrary
         Dictionary<string, byte[]> imageList; //Images converted to byte arrays
         List<MSECard> cardsList; //cards in the Set
         List<MSEKeyword> keywordsList; //Keywords unique to the Set
+        MSEDictionary symbolData;
 
         /// <summary>
         /// Initializes a new instance of a <see cref="MSESet"/> from a file path.
@@ -38,26 +39,39 @@ namespace MSESetLibrary
                 //Read all Entries in Zip File
                 foreach (ZipArchiveEntry zipEntry in mseSet.Entries)
                 {
-                    //Create XML
-                    if (zipEntry.Name.EndsWith(".mse-symbol"))
+                    using (var zipEntryStream = zipEntry.Open())
                     {
-                        
+                        //Create XML
+                        if (zipEntry.Name.EndsWith(".mse-symbol"))
+                        {
+                            //Read ZipEntry
+                            using (StreamReader streamReader = new StreamReader(zipEntryStream))
+                            {
+                                //Read Text File
+                                string symboldata = streamReader.ReadToEnd();
+                                symbolData = MSEDictionary.ConvertToDictionary(symboldata);
+                            }
+                        }
+                        //Load Image
+                        else if (zipEntry.Name.StartsWith("image"))
+                        {
+                            //Add to Image List
+                            using (MemoryStream memoryStream = new MemoryStream())
+                            {
+                                zipEntryStream.CopyTo(memoryStream);
+                                imageList.Add(zipEntry.Name, memoryStream.ToArray());
+                            }
+                        }
+                        //Set Details
+                        else if (zipEntry.Name == "set") GetSetDetails(zipEntryStream);
                     }
-                    //Load Image
-                    else if (zipEntry.Name.StartsWith("image"))
-                    {
-                        
-                    }
-                    //Set Details
-                    else if (zipEntry.Name == "set") GetSetDetails(zipEntry);
                 }
             }
         }
 
-        //Read Set File
-        private void GetSetDetails(ZipArchiveEntry setFile)
+        //Reads "set" File
+        private void GetSetDetails(Stream zipEntryStream)
         {
-            using (var zipEntryStream = setFile.Open())
             using (StreamReader streamReader = new StreamReader(zipEntryStream))
             {
                 //Read Text File
@@ -144,6 +158,15 @@ namespace MSESetLibrary
         {
             get { return keywordsList; }
             set { keywordsList = value; }
+        }
+
+        /// <summary>
+        /// Images stored in the Set
+        /// </summary>
+        public Dictionary<string, byte[]> Images
+        {
+            get { return imageList; }
+            set { imageList = value; }
         }
     }
 
