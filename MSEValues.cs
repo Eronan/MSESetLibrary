@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MSESetLibrary
 {
@@ -48,7 +50,7 @@ namespace MSESetLibrary
                 CommonConstrutor(keyvalue[0].Trim(), typeof(Color), returnColour);
             }
             //Return DateTime
-            else if (DateTime.TryParseExact(data, "yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture, System.Globalization.DateTimeStyles.None, out returnDate))
+            else if (DateTime.TryParseExact(data, "yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.CurrentCulture, System.Globalization.DateTimeStyles.None, out returnDate))
                 CommonConstrutor(keyvalue[0].Trim(), typeof(DateTime), returnDate);
             //Return String
             else CommonConstrutor(keyvalue[0].Trim(), typeof(string), data.Trim());
@@ -132,7 +134,6 @@ namespace MSESetLibrary
             return false;
         }
 
-        //Get Value of Type
         /// <summary>
         /// Gets an <see cref="MSEKeyValue"/> from the <see cref="MSEDictionary"/> with a matching key and type.
         /// </summary>
@@ -258,7 +259,7 @@ namespace MSESetLibrary
         {
             //Remove Indent
             //string[] lines = msedata.Split('\n');
-            string[] sections = Regex.Split(sectiontext, @"[\r\n]+(?![\t\n])");
+            string[] sections = Regex.Split(sectiontext, @"[\r\n]+(?![\t\r\n])");
             MSEDictionary mseList = new MSEDictionary();
             for (int i = 0; i < sections.Length; i++)
             {
@@ -279,6 +280,8 @@ namespace MSESetLibrary
                     //Convert to MSECard instead
                     if (title == "card") mseList.Add(new MSEKeyValue(title, typeof(MSECard), new MSECard(value)));
                     else if (title == "keyword") mseList.Add(new MSEKeyValue(title, typeof(MSEKeyword), new MSEKeyword(value)));
+                    //else if (title == "extra card field" || title == "card field") mseList.Add(new MSEKeyValue(title, typeof(MSEField), new MSEField(value)));
+                    else if (title == "init script" || title == "script") mseList.Add(new MSEKeyValue(title, typeof(string), value));
                     else
                     {
                         //Recursion

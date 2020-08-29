@@ -16,6 +16,7 @@ namespace MSESetLibrary
         //Variables
         string stylesheet;
         MSEVersion gameVersion;
+        string mseVersion;
         MSEDictionary setInfo; //SetInfo
         MSEDictionary styling; //Styling unique to this set
         Dictionary<string, byte[]> imageList; //Images converted to byte arrays
@@ -31,6 +32,7 @@ namespace MSESetLibrary
         {
             cardsList = new List<MSECard>();
             keywordsList = new List<MSEKeyword>();
+            imageList = new Dictionary<string, byte[]>();
             //Read Zip Archive
             using (FileStream zipToOpen = new FileStream(path, FileMode.Open))
             using (ZipArchive mseSet = new ZipArchive(zipToOpen, ZipArchiveMode.Read))
@@ -80,8 +82,9 @@ namespace MSESetLibrary
 
             //Retrieve data from MSEDictionary
             gameVersion.Name = setInfo.RemoveAndGet("game").Value.ToString();
+            gameVersion.VersionNumber = "0";
             stylesheet = setInfo.RemoveAndGet("stylesheet").Value.ToString();
-            gameVersion.VersionNumber = setInfo.RemoveAndGet("mse version").Value.ToString();
+            mseVersion = setInfo.RemoveAndGet("mse version").Value.ToString();
             styling = (MSEDictionary)setInfo.RemoveAndGet("styling").Value;
 
             //Convert MSEDictionary of Cards to List of Cards
@@ -108,11 +111,19 @@ namespace MSESetLibrary
         }
 
         /// <summary>
-        /// Game and Version Number of MSE that the set was made with.
+        /// Game and Version Number of the Game that the set was made with.
         /// </summary>
         public MSEVersion GameVersion
         {
             get { return gameVersion; }
+        }
+
+        /// <summary>
+        /// Version Number of MSE that the set was made with
+        /// </summary>
+        public string ProgramVersion
+        {
+            get { return mseVersion; }
         }
 
         /// <summary>
