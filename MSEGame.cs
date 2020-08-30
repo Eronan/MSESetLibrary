@@ -126,7 +126,7 @@ namespace MSESetLibrary
         string _cardListName;
         MSEJustifiedAlignment _justifiedAlignment;
         ContentAlignment _contentAlignment;
-        string _sortScript;
+        MSEScript _sortScript;
         int _tabIndex;
 
         public MSEField(string sectionText)
@@ -140,6 +140,58 @@ namespace MSESetLibrary
         }
 
         private void GetFromDictionary(MSEDictionary keyValues)
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class MSEText : MSEField
+    {
+        MSEScript _script;
+        MSEScript _default;
+        string _defaultName;
+        bool _multiLine;
+
+        public MSEText(MSEDictionary keyValues) : base(keyValues)
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class MSEChoice : MSEField
+    {
+        MSEScript _script;
+        MSEScript _default;
+        string _initial;
+        string _defaultName;
+        List<string> _choices;
+        List<Color> _choiceColours;
+
+        public MSEChoice(MSEDictionary keyValues) : base(keyValues)
+        {
+
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    public class MSEPackage : MSEField
+    {
+        MSEScript _script;
+        MSEScript _default;
+        string _initial;
+        string _defaultName;
+        List<string> _choices;
+        List<Color> _choiceColours;
+
+        public MSEChoice(MSEDictionary keyValues) : base(keyValues)
         {
 
         }
@@ -180,5 +232,20 @@ namespace MSESetLibrary
         }
     }
 
-    
+    public class MSEScript
+    {
+        /// <summary>
+        /// The Text for the Script
+        /// </summary>
+        public string Script { get; set; }
+
+        /// <summary>
+        /// Builds a Script Class of MSE
+        /// </summary>
+        /// <param name="scriptText">Text Value for the JSON</param>
+        public MSEScript(string scriptText)
+        {
+            this.Script = scriptText;
+        }
+    }
 }
